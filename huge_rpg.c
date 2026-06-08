@@ -1,8 +1,9 @@
 #include <gb/gb.h>
-#include <gbdk/console.h>   // gotoxy
-#include <stdio.h>          // printf, sprintf
-#include <stdlib.h>         // rand, srand
-#include <string.h>         // strcpy
+#include <gbdk/console.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <rand.h>          // for initrand()
 
 // Tile placeholders
 const unsigned char playerTile[] = {0xFF,0x81,0x81,0x81,0x81,0x81,0x81,0xFF, 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
@@ -60,7 +61,6 @@ Shop currentShop = {50, 80};
 
 UINT8 menuSelection = 0;
 
-// Function prototypes
 void updateDisplay(void);
 void drawWorld(void);
 void drawUI(void);
