@@ -1,8 +1,8 @@
 #include <gb/gb.h>
-#include <gbdk/console.h>   // For gotoxy()
-#include <stdlib.h>
-#include <string.h>
-#include <rand.h>
+#include <gbdk/console.h>   // gotoxy
+#include <stdio.h>          // printf, sprintf
+#include <stdlib.h>         // rand, srand
+#include <string.h>         // strcpy
 
 // Tile placeholders
 const unsigned char playerTile[] = {0xFF,0x81,0x81,0x81,0x81,0x81,0x81,0xFF, 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
