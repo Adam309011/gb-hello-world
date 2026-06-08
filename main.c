@@ -1,4 +1,5 @@
 #include <gb/gb.h>
+#include <gb/console.h>   // for gotoxy
 #include <stdio.h>
 
 void main() {
@@ -19,7 +20,7 @@ void main() {
     
     while(1) {
         if (gameRunning) {
-            // Movement (same as before)
+            // Player movement
             if (joypad() & J_LEFT)  playerX--;
             if (joypad() & J_RIGHT) playerX++;
             if (joypad() & J_UP)    playerY--;
@@ -43,12 +44,13 @@ void main() {
             if (enemyX < 8 || enemyX > 152) enemyDX = -enemyDX;
             if (enemyY < 16 || enemyY > 136) enemyDY = -enemyDY;
             
-            // Collision
+            // Collision detection
             if (playerX < enemyX + 8 && playerX + 8 > enemyX &&
                 playerY < enemyY + 8 && playerY + 8 > enemyY) {
                 gameRunning = 0;
             }
         } else {
+            // Game over: press A to restart
             if (joypad() & J_A) {
                 playerX = 80;
                 playerY = 120;
@@ -62,10 +64,9 @@ void main() {
             }
         }
         
-        // ===== FIXED DISPLAY =====
-        // Position cursor at top-left (row 0, column 0) and print score
+        // Display score and messages using gotoxy
         gotoxy(0, 0);
-        printf("SCORE: %05u     ", score);  // Spaces after to clear old digits
+        printf("SCORE: %05u     ", score);
         
         if (!gameRunning) {
             gotoxy(0, 1);
@@ -73,7 +74,7 @@ void main() {
             gotoxy(0, 2);
             printf("PRESS A        ");
         } else {
-            // Clear the GAME OVER lines when restarting
+            // Clear the message lines when game is running
             gotoxy(0, 1);
             printf("               ");
             gotoxy(0, 2);
