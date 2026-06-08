@@ -26,8 +26,8 @@ jobs:
         run: |
           export GBDK_HOME=$PWD/gbdk
           export PATH=$GBDK_HOME/bin:$PATH
-          $GBDK_HOME/bin/lcc -mgbz80 -o game.gb main.c
-          ls -l game.gb   # Show that the ROM was created
+          $GBDK_HOME/bin/lcc -msm83:gb -o game.gb main.c
+          ls -l game.gb
 
       - name: Upload ROM
         uses: actions/upload-artifact@v4
