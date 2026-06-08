@@ -1,4 +1,4 @@
-name: Build Game Boy ROM
+name: Build Game Boy ROM (RPG)
 
 on:
   push:
@@ -11,18 +11,24 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install GBDK
+      - name: Download and install GBDK
         run: |
+          # Download latest GBDK
           wget https://github.com/gbdk-2020/gbdk-2020/releases/latest/download/gbdk-linux64.tar.gz
           tar -xzf gbdk-linux64.tar.gz
+          # Set environment variables
           echo "GBDKROOT=$(pwd)/gbdk" >> $GITHUB_ENV
           echo "$(pwd)/gbdk/bin" >> $GITHUB_PATH
-          # Create missing /opt/gbdk structure with symlinks
+          # Create /opt/gbdk structure and symlink everything
           sudo mkdir -p /opt/gbdk/bin /opt/gbdk/lib
           for file in $(pwd)/gbdk/bin/*; do
             sudo ln -sf $file /opt/gbdk/bin/
           done
           sudo ln -sf $(pwd)/gbdk/lib /opt/gbdk/lib
+          # Also symlink the include directory (not strictly needed but safe)
+          sudo ln -sf $(pwd)/gbdk/include /opt/gbdk/include
+          # Verify sdcc and sdldgb are accessible
+          ls -la /opt/gbdk/bin/sdcc /opt/gbdk/bin/sdldgb
 
       - name: Create Makefile
         run: |
@@ -37,10 +43,13 @@ jobs:
           EOF
 
       - name: Compile ROM
-        run: make
+        run: |
+          # Show that huge_rpg.c exists
+          ls -la huge_rpg.c
+          make
 
-      - name: Upload ROM
+      - name: Upload ROM artifact
         uses: actions/upload-artifact@v4
         with:
-          name: gameboy-rom
+          name: gameboy-rpg-rom
           path: "*.gb"
