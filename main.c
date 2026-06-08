@@ -1,14 +1,15 @@
 #include <gb/gb.h>
 #include <stdio.h>
 #include <string.h>
+#include <gb/font.h>   // for font loading
 
 // Helper: print a number at background position (x,y)
 void printScore(UINT8 x, UINT8 y, UINT16 score) {
     char buffer[10];
-    sprintf(buffer, "%05u", score);  // 5 digits with leading zeros
+    sprintf(buffer, "%05u", score);
     UINT8 i;
     for (i = 0; i < 5; i++) {
-        set_bkg_tile_xy(x + i, y, buffer[i] - 32);  // ASCII to tile index
+        set_bkg_tile_xy(x + i, y, buffer[i] - 32);
     }
 }
 
@@ -21,6 +22,10 @@ void printText(UINT8 x, UINT8 y, char* text) {
 }
 
 void main() {
+    // === LOAD THE FONT ===
+    font_init();
+    font_set(font_load(font_ibm));   // this loads the font into background tiles
+    
     UINT8 playerX = 80, playerY = 120;
     UINT8 enemyX = 80, enemyY = 40;
     INT8 enemyDX = 2, enemyDY = 1;
@@ -39,7 +44,7 @@ void main() {
         }
     }
     
-    // Print initial labels
+    // Print static label
     printText(0, 0, "SCORE:");
     
     UINT8 playerTile[] = { 0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF };
@@ -60,10 +65,10 @@ void main() {
             if (playerY < 16) playerY = 16;
             if (playerY > 136) playerY = 136;
             
-            // Score increases (every frame)
+            // Score increases
             score++;
             
-            // Difficulty: faster every 300 points
+            // Difficulty
             speedBonus = (score / 300) * 1;
             if (speedBonus > 6) speedBonus = 6;
             
@@ -80,22 +85,24 @@ void main() {
             }
             
             // Update score display
-            printScore(7, 0, score);  // print at column 7 (after "SCORE:")
+            printScore(7, 0, score);  // after "SCORE:"
         } else {
-            // Game over message
+            // Game over
             printText(0, 1, "GAME OVER");
             printText(0, 2, "PRESS A");
             if (joypad() & J_A) {
-                // Reset everything
+                // Reset
                 playerX = 80; playerY = 120;
                 enemyX = 80; enemyY = 40;
                 enemyDX = 2; enemyDY = 1;
                 score = 0;
                 speedBonus = 0;
                 gameRunning = 1;
-                // Clear game over messages
+                // Clear messages
                 printText(0, 1, "        ");
                 printText(0, 2, "       ");
+                // Re-print label just in case
+                printText(0, 0, "SCORE:");
             }
         }
         
