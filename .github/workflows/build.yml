@@ -15,7 +15,7 @@ jobs:
       - name: Install tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y wget tar make
+          sudo apt-get install -y wget tar
 
       - name: Download GBDK
         run: |
@@ -26,7 +26,8 @@ jobs:
         run: |
           export GBDK_HOME=$PWD/gbdk
           export PATH=$GBDK_HOME/bin:$PATH
-          $GBDK_HOME/bin/lcc -o game.gb main.c
+          $GBDK_HOME/bin/lcc -mgbz80 -o game.gb main.c
+          ls -l game.gb   # Show that the ROM was created
 
       - name: Upload ROM
         uses: actions/upload-artifact@v4
