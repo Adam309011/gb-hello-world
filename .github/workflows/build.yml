@@ -10,28 +10,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Install GBDK
+      - name: Build with GBDK Docker
         run: |
-          wget https://github.com/gbdk-2020/gbdk-2020/releases/latest/download/gbdk-linux64.tar.gz
-          tar -xzf gbdk-linux64.tar.gz
-          echo "$(pwd)/gbdk/bin" >> $GITHUB_PATH
-          echo "GBDKROOT=$(pwd)/gbdk" >> $GITHUB_ENV
-          # Create missing directory and symlink to fix lcc's hardcoded path
-          sudo mkdir -p /opt/gbdk/bin
-          sudo ln -sf $(pwd)/gbdk/bin/sdcc /opt/gbdk/bin/sdcc
-      - name: Create Makefile
-        run: |
-          cat > Makefile << 'EOF'
-          CC = lcc
-          CFLAGS = -Wa-l -Wl-m -Wl-j
-          all: game.gb
-          game.gb: huge_rpg.c
-          	$(CC) $(CFLAGS) -o game.gb huge_rpg.c
-          clean:
-          	rm -f game.gb *.o *.lst *.map
-          EOF
-      - name: Compile ROM
-        run: make
+          docker run --rm -v $(pwd):/src ghcr.io/gbdk-2020/gbdk:latest bash -c "cd /src && lcc -Wa-l -Wl-m -Wl-j -o game.gb huge_rpg.c"
       - name: Upload ROM artifact
         uses: actions/upload-artifact@v4
         with:
