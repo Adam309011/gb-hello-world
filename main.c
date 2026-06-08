@@ -2,7 +2,6 @@
 #include <stdio.h>
 #include <string.h>
 
-// Helper: print a number at background position (x,y)
 void printScore(UINT8 x, UINT8 y, UINT16 score) {
     char buffer[10];
     sprintf(buffer, "%05u", score);
@@ -12,7 +11,6 @@ void printScore(UINT8 x, UINT8 y, UINT16 score) {
     }
 }
 
-// Helper: print text at background position
 void printText(UINT8 x, UINT8 y, char* text) {
     UINT8 i;
     for (i = 0; i < strlen(text); i++) {
@@ -21,11 +19,10 @@ void printText(UINT8 x, UINT8 y, char* text) {
 }
 
 void main() {
-    // Load the default font by printing something (this makes font tiles available)
-    printf(" ");
+    printf(" ");  // load font
     
-    UINT8 playerX = 80, playerY = 120;
-    UINT8 enemyX = 80, enemyY = 40;
+    INT16 playerX = 80, playerY = 120;   // signed for calculations
+    INT16 enemyX = 80, enemyY = 40;
     INT8 enemyDX = 2, enemyDY = 1;
     UINT8 gameRunning = 1;
     UINT16 score = 0;
@@ -41,11 +38,8 @@ void main() {
             set_bkg_tile_xy(i, j, 0);
         }
     }
-    
-    // Print static label
     printText(0, 0, "SCORE:");
     
-    // Sprite tiles
     UINT8 playerTile[] = { 0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF };
     UINT8 enemyTile[]  = { 0xAA,0x55,0xAA,0x55,0xAA,0x55,0xAA,0x55 };
     set_sprite_data(0, 1, playerTile);
@@ -59,53 +53,62 @@ void main() {
             if (joypad() & J_UP)    playerY--;
             if (joypad() & J_DOWN)  playerY++;
             
+            // Player boundaries (keep inside screen, sprite is 8x8)
             if (playerX < 8) playerX = 8;
             if (playerX > 152) playerX = 152;
             if (playerY < 16) playerY = 16;
             if (playerY > 136) playerY = 136;
             
-            // Score
             score++;
             
-            // Difficulty
-            speedBonus = (score / 300) * 1;
+            speedBonus = (score / 300);
             if (speedBonus > 6) speedBonus = 6;
             
-            // Enemy movement
-            enemyX += enemyDX + speedBonus/2;
-            enemyY += enemyDY + speedBonus/2;
-            if (enemyX < 8 || enemyX > 152) enemyDX = -enemyDX;
-            if (enemyY < 16 || enemyY > 136) enemyDY = -enemyDY;
+            // Enemy movement with current speed
+            enemyX += enemyDX + (speedBonus / 2);
+            enemyY += enemyDY + (speedBonus / 2);
             
-            // Collision
+            // Boundary bounce with correction to prevent sticking
+            if (enemyX < 8) {
+                enemyX = 8 + (8 - enemyX);  // push back inside
+                enemyDX = -enemyDX;
+            }
+            if (enemyX > 152) {
+                enemyX = 152 - (enemyX - 152);
+                enemyDX = -enemyDX;
+            }
+            if (enemyY < 16) {
+                enemyY = 16 + (16 - enemyY);
+                enemyDY = -enemyDY;
+            }
+            if (enemyY > 136) {
+                enemyY = 136 - (enemyY - 136);
+                enemyDY = -enemyDY;
+            }
+            
+            // Collision detection (simple AABB)
             if (playerX < enemyX + 8 && playerX + 8 > enemyX &&
                 playerY < enemyY + 8 && playerY + 8 > enemyY) {
                 gameRunning = 0;
             }
             
-            // Update score display
             printScore(7, 0, score);
         } else {
-            // Game over
             printText(0, 1, "GAME OVER");
             printText(0, 2, "PRESS A");
             if (joypad() & J_A) {
-                // Reset everything
                 playerX = 80; playerY = 120;
                 enemyX = 80; enemyY = 40;
                 enemyDX = 2; enemyDY = 1;
                 score = 0;
                 speedBonus = 0;
                 gameRunning = 1;
-                // Clear messages
                 printText(0, 1, "        ");
                 printText(0, 2, "       ");
-                // Re-print label (just in case)
                 printText(0, 0, "SCORE:");
             }
         }
         
-        // Draw sprites
         set_sprite_tile(0, 0);
         move_sprite(0, playerX, playerY);
         set_sprite_tile(1, 1);
