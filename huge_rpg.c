@@ -2,58 +2,41 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <rand.h>
 
-// ---------- TILE PLACEHOLDERS ----------
-// (Will be replaced with actual art later)
-const unsigned char playerTile[]   = {0xFF,0x81,0x81,0x81,0x81,0x81,0x81,0xFF, 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
-const unsigned char enemyTile[]    = {0x00,0x7E,0x42,0x42,0x42,0x42,0x7E,0x00, 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
-const unsigned char grassTile[]    = {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
+// Tile placeholders
+const unsigned char playerTile[] = {0xFF,0x81,0x81,0x81,0x81,0x81,0x81,0xFF, 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
+const unsigned char enemyTile[]  = {0x00,0x7E,0x42,0x42,0x42,0x42,0x7E,0x00, 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
+const unsigned char grassTile[]  = {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
 
-// ---------- GAME STATES ----------
-typedef enum {
-    STATE_OVERWORLD,
-    STATE_BATTLE,
-    STATE_MENU,
-    STATE_SHOP,
-    STATE_GAMEOVER
-} GameState;
-
+typedef enum { STATE_OVERWORLD, STATE_BATTLE, STATE_MENU, STATE_SHOP, STATE_GAMEOVER } GameState;
 GameState gameState = STATE_OVERWORLD;
 
-// ---------- PLAYER STATS ----------
 typedef struct {
     char name[12];
-    uint16_t hp, maxHp;
-    uint8_t level, exp, nextExp;
-    uint8_t str, def, agi;
-    uint16_t gold;
-    // Inventory simple (items are just potions)
-    uint8_t potions;
+    UINT16 hp, maxHp;
+    UINT8 level, exp, nextExp;
+    UINT8 str, def, agi;
+    UINT16 gold;
+    UINT8 potions;
 } Player;
-
 Player player;
 
-// ---------- WORLD MAP ----------
-// 256x256 grid (procedurally generated on start)
-// Using simple tile IDs
-#define WORLD_W 64   // Reduced for memory, but feels large due to zones
+#define WORLD_W 64
 #define WORLD_H 64
-uint8_t worldTiles[WORLD_W][WORLD_H];
-uint8_t worldZone[WORLD_W][WORLD_H];  // 0=field,1=forest,2=mountain,3=dungeon
+UINT8 worldTiles[WORLD_W][WORLD_H];
+UINT8 worldZone[WORLD_W][WORLD_H];
 
-uint8_t playerX, playerY;      // world coordinates (0..WORLD_W-1)
-uint8_t screenX, screenY;      // camera offset (0..WORLD_W-20, etc.)
+UINT8 playerX, playerY, screenX, screenY;
+UINT8 encounterRate = 32;
+UINT8 stepCounter = 0;
 
-// ---------- ENEMY DATA ----------
 typedef struct {
     char name[12];
-    uint8_t level;
-    uint16_t hp, maxHp;
-    uint8_t str, def, agi;
-    uint16_t expReward, goldReward;
+    UINT8 level;
+    UINT16 hp, maxHp;
+    UINT8 str, def, agi;
+    UINT16 expReward, goldReward;
 } Enemy;
-
 Enemy enemies[] = {
     {"Slime",   1, 8,8, 2,1,1, 10, 5},
     {"Goblin",  2,12,12,3,2,2, 20,10},
@@ -64,68 +47,68 @@ Enemy enemies[] = {
     {"Dragon", 15,200,200,20,15,6,500,300}
 };
 #define NUM_ENEMIES 7
-
 Enemy currentEnemy;
 
-// ---------- BATTLE VARIABLES ----------
-uint8_t battleTurn = 0;  // 0 = player, 1 = enemy
-uint8_t battleAction;    // 1=attack, 2=item, 3=flee
-uint8_t battleRunning = 1;
-
-// ---------- SHOP ----------
-typedef struct {
-    uint16_t potionPrice;
-    uint16_t healPrice;
-} Shop;
+UINT8 battleTurn = 0, battleAction, battleRunning = 1;
 Shop currentShop = {50, 80};
+UINT8 menuSelection = 0;
 
-// ---------- MENU STATE ----------
-uint8_t menuSelection = 0;
-const char* menuOptions[] = {"Status", "Use Potion", "Save", "Quit"};
+// Function prototypes
+void updateDisplay(void);
+void drawWorld(void);
+void drawUI(void);
+void battleLoop(void);
+void doPlayerAttack(void);
+void doEnemyAttack(void);
+void gainExp(UINT16 exp);
+void showMessage(const char* msg);
+void waitForKey(void);
+void generateWorld(void);
+void initPlayer(void);
+void levelUp(void);
+void endBattle(UINT8 victory);
+void shopMenu(void);
+void mainMenu(void);
+void handleOverworld(void);
 
 // ---------- UTILITIES ----------
-void updateDisplay();
-void drawWorld();
-void drawUI();
-void battleLoop();
-void doPlayerAttack();
-void doEnemyAttack();
-void gainExp(uint16_t exp);
-void showMessage(const char* msg);
-void waitForKey();
+void showMessage(const char* msg) {
+    gotoxy(0,17);
+    printf("%-20s", msg);
+    wait_vbl_done();
+    delay(1000);
+}
+void waitForKey(void) {
+    while(!joypad());
+    while(joypad());
+}
 
-// ---------- RANDOM ENCOUNTERS ----------
-uint8_t encounterRate = 32;  // 1 in 32 steps
-uint8_t stepCounter = 0;
-
-// ---------- WORLD GENERATION (simple but varied) ----------
-void generateWorld() {
-    // Fill with grass (0)
-    for (uint8_t y=0; y<WORLD_H; y++) {
-        for (uint8_t x=0; x<WORLD_W; x++) {
+// ---------- WORLD ----------
+void generateWorld(void) {
+    UINT8 x,y,val;
+    for(y=0; y<WORLD_H; y++) {
+        for(x=0; x<WORLD_W; x++) {
             worldTiles[x][y] = 0;
-            // Zone based on Perlin-like noise using rand
-            uint8_t val = (x * 131) ^ (y * 253);
+            val = (x * 131) ^ (y * 253);
             val = (val + (val>>4)) & 0x0F;
-            if (val < 3) worldZone[x][y] = 1;      // forest
-            else if (val < 5) worldZone[x][y] = 2; // mountain
-            else if (val == 5) worldZone[x][y] = 3;// dungeon entrance
+            if (val < 3) worldZone[x][y] = 1;
+            else if (val < 5) worldZone[x][y] = 2;
+            else if (val == 5) worldZone[x][y] = 3;
             else worldZone[x][y] = 0;
         }
     }
-    // Place a town in the center
-    for (int8_t y=-2; y<=2; y++) {
-        for (int8_t x=-2; x<=2; x++) {
-            if (WORLD_W/2+x < WORLD_W && WORLD_H/2+y < WORLD_H) {
-                worldTiles[WORLD_W/2+x][WORLD_H/2+y] = 4; // town tile
-                worldZone[WORLD_W/2+x][WORLD_H/2+y] = 4;  // special zone
+    for(y=WORLD_H/2-2; y<=WORLD_H/2+2; y++) {
+        for(x=WORLD_W/2-2; x<=WORLD_W/2+2; x++) {
+            if(x<WORLD_W && y<WORLD_H) {
+                worldTiles[x][y] = 4;
+                worldZone[x][y] = 4;
             }
         }
     }
 }
 
-// ---------- PLAYER INIT ----------
-void initPlayer() {
+// ---------- PLAYER ----------
+void initPlayer(void) {
     strcpy(player.name, "Hero");
     player.level = 1;
     player.exp = 0;
@@ -139,15 +122,14 @@ void initPlayer() {
     player.potions = 3;
 }
 
-// ---------- LEVEL UP ----------
-void levelUp() {
-    while (player.exp >= player.nextExp) {
+void levelUp(void) {
+    while(player.exp >= player.nextExp) {
         player.exp -= player.nextExp;
         player.level++;
         player.maxHp += 8 + (rand() % 5);
         player.str += 1 + (rand() % 3);
         player.def += 1 + (rand() % 2);
-        player.agi += 1 + (rand() % 2);
+        player.agi += 1 + (rand() % 3);
         player.hp = player.maxHp;
         player.nextExp = player.level * 50;
         showMessage("Level Up!");
@@ -155,9 +137,30 @@ void levelUp() {
     }
 }
 
-// ---------- BATTLE REWARDS ----------
-void endBattle(uint8_t victory) {
-    if (victory) {
+void gainExp(UINT16 exp) {
+    player.exp += exp;
+    levelUp();
+}
+
+// ---------- BATTLE ----------
+void doPlayerAttack(void) {
+    UINT16 damage = player.str + (rand() % (player.str/2 + 2)) - (currentEnemy.def/2);
+    if(damage < 1) damage = 1;
+    currentEnemy.hp -= damage;
+    char msg[20];
+    sprintf(msg, "Dealt %u dmg!", damage);
+    showMessage(msg);
+}
+void doEnemyAttack(void) {
+    UINT16 damage = currentEnemy.str + (rand() % (currentEnemy.str/2 + 1)) - (player.def/2);
+    if(damage < 1) damage = 1;
+    player.hp -= damage;
+    char msg[20];
+    sprintf(msg, "Enemy hits for %u", damage);
+    showMessage(msg);
+}
+void endBattle(UINT8 victory) {
+    if(victory) {
         gainExp(currentEnemy.expReward);
         player.gold += currentEnemy.goldReward;
         char msg[20];
@@ -169,35 +172,32 @@ void endBattle(uint8_t victory) {
     battleRunning = 1;
     updateDisplay();
 }
-
-// ---------- BATTLE LOOP ----------
-void battleLoop() {
-    if (!battleRunning) return;
+void battleLoop(void) {
+    if(!battleRunning) return;
     drawUI();
     printf("\n\n %s Lv.%d\n HP:%d/%d\n", currentEnemy.name, currentEnemy.level,
            currentEnemy.hp, currentEnemy.maxHp);
     printf("\n1.Attack 2.Item\n3.Flee");
     waitForKey();
-    uint8_t key = joypad();
-    if (key & J_A) battleAction = 1;
-    else if (key & J_B) battleAction = 2;
-    else if (key & J_START) battleAction = 3;
+    UINT8 key = joypad();
+    if(key & J_A) battleAction = 1;
+    else if(key & J_B) battleAction = 2;
+    else if(key & J_START) battleAction = 3;
     else return;
 
-    if (battleAction == 1) doPlayerAttack();
-    else if (battleAction == 2) {
-        if (player.potions > 0 && player.hp < player.maxHp) {
+    if(battleAction == 1) doPlayerAttack();
+    else if(battleAction == 2) {
+        if(player.potions > 0 && player.hp < player.maxHp) {
             player.hp += 20;
-            if (player.hp > player.maxHp) player.hp = player.maxHp;
+            if(player.hp > player.maxHp) player.hp = player.maxHp;
             player.potions--;
             showMessage("Used potion!");
             waitForKey();
         } else showMessage("No potion / full HP!");
         waitForKey();
     }
-    else if (battleAction == 3) {
-        // flee chance based on agility
-        if ((rand() % 100) < (player.agi * 10)) {
+    else if(battleAction == 3) {
+        if((rand() % 100) < (player.agi * 10)) {
             showMessage("Fled safely!");
             waitForKey();
             gameState = STATE_OVERWORLD;
@@ -208,15 +208,9 @@ void battleLoop() {
             waitForKey();
         }
     }
-
-    if (currentEnemy.hp <= 0) {
-        endBattle(1);
-        return;
-    }
-
-    // Enemy turn
+    if(currentEnemy.hp <= 0) { endBattle(1); return; }
     doEnemyAttack();
-    if (player.hp <= 0) {
+    if(player.hp <= 0) {
         showMessage("You died...");
         waitForKey();
         gameState = STATE_GAMEOVER;
@@ -225,200 +219,125 @@ void battleLoop() {
     wait_vbl_done();
 }
 
-void doPlayerAttack() {
-    uint16_t damage = player.str + (rand() % (player.str/2 + 2)) - (currentEnemy.def/2);
-    if (damage < 1) damage = 1;
-    currentEnemy.hp -= damage;
-    char msg[20];
-    sprintf(msg, "Dealt %u dmg!", damage);
-    showMessage(msg);
-}
-
-void doEnemyAttack() {
-    uint16_t damage = currentEnemy.str + (rand() % (currentEnemy.str/2 + 1)) - (player.def/2);
-    if (damage < 1) damage = 1;
-    player.hp -= damage;
-    char msg[20];
-    sprintf(msg, "Enemy hits for %u", damage);
-    showMessage(msg);
-}
-
-// ---------- GAIN EXP ----------
-void gainExp(uint16_t exp) {
-    player.exp += exp;
-    levelUp();
-}
-
-// ---------- SHOPPING ----------
-void shopMenu() {
+// ---------- SHOP & MENU ----------
+void shopMenu(void) {
     drawUI();
     printf("\nSHOP\n1.Potion(%uG)\n2.Heal(%uG)\n3.Exit", currentShop.potionPrice, currentShop.healPrice);
-    uint8_t key = joypad();
-    if (key & J_A) {
-        if (player.gold >= currentShop.potionPrice) {
+    UINT8 key = joypad();
+    if(key & J_A) {
+        if(player.gold >= currentShop.potionPrice) {
             player.gold -= currentShop.potionPrice;
             player.potions++;
             showMessage("Bought potion");
         } else showMessage("Not enough gold");
-    } else if (key & J_B) {
-        if (player.gold >= currentShop.healPrice && player.hp < player.maxHp) {
+    } else if(key & J_B) {
+        if(player.gold >= currentShop.healPrice && player.hp < player.maxHp) {
             player.gold -= currentShop.healPrice;
             player.hp = player.maxHp;
             showMessage("Fully healed");
         } else showMessage("Full HP or poor");
-    } else if (key & J_START) gameState = STATE_OVERWORLD;
+    } else if(key & J_START) gameState = STATE_OVERWORLD;
     waitForKey();
 }
-
-// ---------- MENU HANDLING ----------
-void mainMenu() {
+void mainMenu(void) {
     drawUI();
     printf("\n%s Lv.%d\nHP:%d/%d\nG:%u\nPots:%d\n\n", player.name, player.level,
            player.hp, player.maxHp, player.gold, player.potions);
     printf("1.Status 2.Potion\n3.Save 4.Quit");
-    uint8_t key = joypad();
-    if (key & J_A) menuSelection = 0;
-    else if (key & J_B) menuSelection = 1;
-    else if (key & J_SELECT) menuSelection = 2;
-    else if (key & J_START) menuSelection = 3;
-
+    UINT8 key = joypad();
+    if(key & J_A) menuSelection = 0;
+    else if(key & J_B) menuSelection = 1;
+    else if(key & J_SELECT) menuSelection = 2;
+    else if(key & J_START) menuSelection = 3;
     switch(menuSelection) {
-        case 0: // Status
-            showMessage("Show stats (placeholder)");
-            waitForKey();
-            break;
-        case 1: // Use Potion
-            if (player.potions>0 && player.hp<player.maxHp) {
+        case 0: showMessage("Stats: STR/DEF/AGI"); waitForKey(); break;
+        case 1:
+            if(player.potions>0 && player.hp<player.maxHp) {
                 player.hp+=20;
                 if(player.hp>player.maxHp) player.hp=player.maxHp;
                 player.potions--;
                 showMessage("Used potion");
             } else showMessage("No potion/full HP");
-            waitForKey();
-            break;
-        case 2: // Save
-            // In real GB, save to RAM; here just message
-            showMessage("Game saved (mock)");
-            waitForKey();
-            break;
-        case 3: // Quit to overworld
-            gameState = STATE_OVERWORLD;
-            break;
+            waitForKey(); break;
+        case 2: showMessage("Game saved (mock)"); waitForKey(); break;
+        case 3: gameState = STATE_OVERWORLD; break;
     }
 }
 
-// ---------- OVERWORLD MOVEMENT & ENCOUNTERS ----------
-void handleOverworld() {
-    uint8_t newX = playerX, newY = playerY;
-    uint8_t moved = 0;
-    uint8_t keys = joypad();
-
-    if (keys & J_LEFT)  { newX--; moved=1; }
-    if (keys & J_RIGHT) { newX++; moved=1; }
-    if (keys & J_UP)    { newY--; moved=1; }
-    if (keys & J_DOWN)  { newY++; moved=1; }
-
-    if (moved && newX<WORLD_W && newY<WORLD_H) {
-        playerX = newX;
-        playerY = newY;
+// ---------- OVERWORLD ----------
+void handleOverworld(void) {
+    UINT8 newX = playerX, newY = playerY, moved = 0;
+    UINT8 keys = joypad();
+    if(keys & J_LEFT)  { newX--; moved=1; }
+    if(keys & J_RIGHT) { newX++; moved=1; }
+    if(keys & J_UP)    { newY--; moved=1; }
+    if(keys & J_DOWN)  { newY++; moved=1; }
+    if(moved && newX<WORLD_W && newY<WORLD_H) {
+        playerX = newX; playerY = newY;
         stepCounter++;
-        // Random encounter
-        if (worldZone[playerX][playerY] != 4 && (rand() % encounterRate) == 0) {
-            // pick enemy based on zone difficulty
-            uint8_t enemyIdx = (worldZone[playerX][playerY] + player.level/2) % NUM_ENEMIES;
-            if (enemyIdx >= NUM_ENEMIES) enemyIdx = NUM_ENEMIES-1;
+        if(worldZone[playerX][playerY] != 4 && (rand() % encounterRate) == 0) {
+            UINT8 enemyIdx = (worldZone[playerX][playerY] + player.level/2) % NUM_ENEMIES;
+            if(enemyIdx >= NUM_ENEMIES) enemyIdx = NUM_ENEMIES-1;
             currentEnemy = enemies[enemyIdx];
             gameState = STATE_BATTLE;
             battleRunning = 1;
             return;
         }
     }
-
-    // Town zone (center) opens shop if START pressed
-    if (worldZone[playerX][playerY] == 4 && (joypad() & J_START)) {
-        gameState = STATE_SHOP;
-    }
-    if (joypad() & J_SELECT) {
-        gameState = STATE_MENU;
-    }
-
-    // Update camera
-    screenX = playerX - 10;
-    if (screenX > WORLD_W-20) screenX = WORLD_W-20;
-    if (screenX < 0) screenX = 0;
-    screenY = playerY - 8;
-    if (screenY > WORLD_H-16) screenY = WORLD_H-16;
-    if (screenY < 0) screenY = 0;
+    if(worldZone[playerX][playerY] == 4 && (joypad() & J_START)) gameState = STATE_SHOP;
+    if(joypad() & J_SELECT) gameState = STATE_MENU;
+    screenX = playerX - 10; if(screenX > WORLD_W-20) screenX = WORLD_W-20; if(screenX < 0) screenX = 0;
+    screenY = playerY - 8;  if(screenY > WORLD_H-16) screenY = WORLD_H-16; if(screenY < 0) screenY = 0;
 }
 
 // ---------- DRAWING ----------
-void drawWorld() {
-    // Simple tilemap drawing (placeholder)
-    for (uint8_t y=0; y<16; y++) {
-        for (uint8_t x=0; x<20; x++) {
-            uint8_t wx = screenX + x;
-            uint8_t wy = screenY + y;
-            if (wx < WORLD_W && wy < WORLD_H) {
-                // Use different tile IDs based on zone and if it's player position
-                uint8_t tile = 0;
-                if (wx == playerX && wy == playerY) tile = 1; // player sprite
-                else if (worldZone[wx][wy] == 4) tile = 4;
-                else if (worldZone[wx][wy] == 1) tile = 2;
-                else if (worldZone[wx][wy] == 2) tile = 3;
+void drawWorld(void) {
+    UINT8 x,y,wx,wy;
+    for(y=0; y<16; y++) {
+        for(x=0; x<20; x++) {
+            wx = screenX + x; wy = screenY + y;
+            if(wx < WORLD_W && wy < WORLD_H) {
+                UINT8 tile = 0;
+                if(wx == playerX && wy == playerY) tile = 1;
+                else if(worldZone[wx][wy] == 4) tile = 4;
+                else if(worldZone[wx][wy] == 1) tile = 2;
+                else if(worldZone[wx][wy] == 2) tile = 3;
                 else tile = 0;
                 set_bkg_tile_xy(x, y, tile);
             }
         }
     }
 }
-
-void drawUI() {
-    // Clear bottom 2 rows for HUD
-    for (uint8_t i=0; i<20; i++) {
-        set_bkg_tile_xy(i, 17, 0);
-        set_bkg_tile_xy(i, 16, 0);
-    }
+void drawUI(void) {
+    UINT8 i;
+    for(i=0; i<20; i++) { set_bkg_tile_xy(i, 17, 0); set_bkg_tile_xy(i, 16, 0); }
     gotoxy(0,16);
     printf("Lv.%d HP:%d/%d G:%u", player.level, player.hp, player.maxHp, player.gold);
 }
-
-// ---------- MESSAGE & WAIT ----------
-void showMessage(const char* msg) {
-    gotoxy(0,17);
-    printf("%-20s", msg);
-    wait_vbl_done();
-    delay(1000);
+void updateDisplay(void) {
+    drawWorld();
+    drawUI();
 }
 
-void waitForKey() {
-    while(!joypad());
-    while(joypad());
-}
-
-// ---------- MAIN GAME LOOP ----------
-void main() {
+// ---------- GAME OVER ----------
+// ---------- MAIN ----------
+void main(void) {
     DISPLAY_ON;
     SHOW_BKG;
     SHOW_SPRITES;
-    // Init tiles (placeholder)
     set_bkg_data(0, 1, grassTile);
     set_sprite_data(0, 1, playerTile);
     set_sprite_data(1, 1, enemyTile);
-    // Random seed
     initrand(DIV_REG);
     generateWorld();
     initPlayer();
-    playerX = WORLD_W/2;
-    playerY = WORLD_H/2;
-    screenX = playerX - 10;
-    screenY = playerY - 8;
-
+    playerX = WORLD_W/2; playerY = WORLD_H/2;
+    screenX = playerX - 10; screenY = playerY - 8;
     while(1) {
         switch(gameState) {
             case STATE_OVERWORLD:
                 handleOverworld();
-                drawWorld();
-                drawUI();
+                updateDisplay();
                 break;
             case STATE_BATTLE:
                 battleLoop();
@@ -434,8 +353,7 @@ void main() {
                 printf("GAME OVER");
                 waitForKey();
                 initPlayer();
-                playerX = WORLD_W/2;
-                playerY = WORLD_H/2;
+                playerX = WORLD_W/2; playerY = WORLD_H/2;
                 gameState = STATE_OVERWORLD;
                 break;
         }
