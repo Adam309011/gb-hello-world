@@ -11,6 +11,13 @@ void printScore(UINT8 x, UINT8 y, UINT16 score) {
     }
 }
 
+// Print a small number (1-9) at background position
+void printNumber(UINT8 x, UINT8 y, UINT8 num) {
+    char buffer[2];
+    sprintf(buffer, "%u", num);
+    set_bkg_tile_xy(x, y, buffer[0] - 32);
+}
+
 void printText(UINT8 x, UINT8 y, char* text) {
     UINT8 i;
     for (i = 0; i < strlen(text); i++) {
@@ -23,10 +30,11 @@ void main() {
     
     INT16 playerX = 80, playerY = 120;
     INT16 enemyX = 80, enemyY = 40;
-    INT8 enemyDX = 2, enemyDY = 1;   // direction and base speed
+    INT8 enemyDX = 2, enemyDY = 1;
     UINT8 gameRunning = 1;
     UINT16 score = 0;
-    UINT8 speedLevel = 0;   // 0 = base speed, 1 = faster, etc.
+    UINT8 speedLevel = 0;       // 0 = base speed, 1 = faster, etc.
+    UINT8 level = 1;            // displayed level = speedLevel + 1
     
     DISPLAY_ON;
     SHOW_SPRITES;
@@ -38,7 +46,10 @@ void main() {
             set_bkg_tile_xy(i, j, 0);
         }
     }
+    
+    // Static labels
     printText(0, 0, "SCORE:");
+    printText(15, 0, "LEVEL:");   // placed at column 15
     
     UINT8 playerTile[] = { 0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF };
     UINT8 enemyTile[]  = { 0xAA,0x55,0xAA,0x55,0xAA,0x55,0xAA,0x55 };
@@ -60,20 +71,14 @@ void main() {
             
             score++;
             
-            // Increase difficulty every 300 points (increase speed magnitude)
-            // speedLevel = 0 (score<300), 1 (300-599), 2 (600-899), etc.
+            // Difficulty: every 300 points increase speedLevel (max 6)
             speedLevel = score / 300;
-            if (speedLevel > 6) speedLevel = 6;  // cap at +6 extra speed
+            if (speedLevel > 6) speedLevel = 6;
+            level = speedLevel + 1;   // level displayed starts at 1
             
-            // Calculate current speed based on base direction + speedLevel
-            // We keep enemyDX as the sign (+1 or -1) and multiply by speed
-            // But for simplicity, store signed magnitude directly
-            // Actually we need to update enemyDX/enemyDY magnitudes
-            // Let's recompute from base direction signs:
+            // Calculate current speed from base signs
             INT8 baseDX = (enemyDX > 0) ? 1 : -1;
             INT8 baseDY = (enemyDY > 0) ? 1 : -1;
-            // Speed values: start at 2 for X, 1 for Y, increase by speedLevel/2? Let's make it clean:
-            // X speed = 2 + speedLevel, Y speed = 1 + speedLevel/2
             INT8 currentSpeedX = 2 + speedLevel;
             INT8 currentSpeedY = 1 + (speedLevel / 2);
             enemyDX = baseDX * currentSpeedX;
@@ -83,10 +88,10 @@ void main() {
             enemyX += enemyDX;
             enemyY += enemyDY;
             
-            // Boundary bounce with position correction
+            // Boundary bounce with correction
             if (enemyX < 8) {
                 enemyX = 8 + (8 - enemyX);
-                enemyDX = -enemyDX;   // reverse direction (sign flips, magnitude stays)
+                enemyDX = -enemyDX;
             }
             if (enemyX > 152) {
                 enemyX = 152 - (enemyX - 152);
@@ -107,20 +112,26 @@ void main() {
                 gameRunning = 0;
             }
             
+            // Update displays
             printScore(7, 0, score);
+            printNumber(21, 0, level);   // after "LEVEL:" (column 21)
         } else {
             printText(0, 1, "GAME OVER");
             printText(0, 2, "PRESS A");
             if (joypad() & J_A) {
+                // Reset everything
                 playerX = 80; playerY = 120;
                 enemyX = 80; enemyY = 40;
-                enemyDX = 2; enemyDY = 1;  // reset to base speed
+                enemyDX = 2; enemyDY = 1;
                 score = 0;
                 speedLevel = 0;
+                level = 1;
                 gameRunning = 1;
+                // Clear messages and re-display static labels
                 printText(0, 1, "        ");
                 printText(0, 2, "       ");
                 printText(0, 0, "SCORE:");
+                printText(15, 0, "LEVEL:");
             }
         }
         
