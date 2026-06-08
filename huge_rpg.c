@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <rand.h>
 
 // Tile placeholders
 const unsigned char playerTile[] = {0xFF,0x81,0x81,0x81,0x81,0x81,0x81,0xFF, 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
@@ -49,8 +50,15 @@ Enemy enemies[] = {
 #define NUM_ENEMIES 7
 Enemy currentEnemy;
 
-UINT8 battleTurn = 0, battleAction, battleRunning = 1;
+UINT8 battleRunning = 1;
+
+// Shop struct definition
+typedef struct {
+    UINT16 potionPrice;
+    UINT16 healPrice;
+} Shop;
 Shop currentShop = {50, 80};
+
 UINT8 menuSelection = 0;
 
 // Function prototypes
@@ -180,6 +188,7 @@ void battleLoop(void) {
     printf("\n1.Attack 2.Item\n3.Flee");
     waitForKey();
     UINT8 key = joypad();
+    UINT8 battleAction = 0;
     if(key & J_A) battleAction = 1;
     else if(key & J_B) battleAction = 2;
     else if(key & J_START) battleAction = 3;
@@ -319,7 +328,6 @@ void updateDisplay(void) {
     drawUI();
 }
 
-// ---------- GAME OVER ----------
 // ---------- MAIN ----------
 void main(void) {
     DISPLAY_ON;
