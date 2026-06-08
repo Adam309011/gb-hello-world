@@ -1,7 +1,6 @@
 #include <gb/gb.h>
 #include <stdio.h>
 #include <string.h>
-#include <gb/font.h>   // for font loading
 
 // Helper: print a number at background position (x,y)
 void printScore(UINT8 x, UINT8 y, UINT16 score) {
@@ -22,9 +21,8 @@ void printText(UINT8 x, UINT8 y, char* text) {
 }
 
 void main() {
-    // === LOAD THE FONT ===
-    font_init();
-    font_set(font_load(font_ibm));   // this loads the font into background tiles
+    // Load the default font by printing something (this makes font tiles available)
+    printf(" ");
     
     UINT8 playerX = 80, playerY = 120;
     UINT8 enemyX = 80, enemyY = 40;
@@ -37,7 +35,7 @@ void main() {
     SHOW_SPRITES;
     SHOW_BKG;
     
-    // Clear background (optional)
+    // Clear background
     for (UINT8 i = 0; i < 32; i++) {
         for (UINT8 j = 0; j < 18; j++) {
             set_bkg_tile_xy(i, j, 0);
@@ -47,6 +45,7 @@ void main() {
     // Print static label
     printText(0, 0, "SCORE:");
     
+    // Sprite tiles
     UINT8 playerTile[] = { 0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF };
     UINT8 enemyTile[]  = { 0xAA,0x55,0xAA,0x55,0xAA,0x55,0xAA,0x55 };
     set_sprite_data(0, 1, playerTile);
@@ -65,7 +64,7 @@ void main() {
             if (playerY < 16) playerY = 16;
             if (playerY > 136) playerY = 136;
             
-            // Score increases
+            // Score
             score++;
             
             // Difficulty
@@ -85,13 +84,13 @@ void main() {
             }
             
             // Update score display
-            printScore(7, 0, score);  // after "SCORE:"
+            printScore(7, 0, score);
         } else {
             // Game over
             printText(0, 1, "GAME OVER");
             printText(0, 2, "PRESS A");
             if (joypad() & J_A) {
-                // Reset
+                // Reset everything
                 playerX = 80; playerY = 120;
                 enemyX = 80; enemyY = 40;
                 enemyDX = 2; enemyDY = 1;
@@ -101,7 +100,7 @@ void main() {
                 // Clear messages
                 printText(0, 1, "        ");
                 printText(0, 2, "       ");
-                // Re-print label just in case
+                // Re-print label (just in case)
                 printText(0, 0, "SCORE:");
             }
         }
