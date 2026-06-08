@@ -12,14 +12,14 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Install dependencies
+      - name: Install tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y make wget tar
+          sudo apt-get install -y wget tar make
 
       - name: Download GBDK
         run: |
-          wget https://github.com/gbdk-2020/gbdk-2020/releases/latest/download/gbdk-linux64.tar.gz
+          wget https://github.com/gbdk-2020/gbdk-2020/releases/download/4.3.0/gbdk-linux64.tar.gz
           tar -xzf gbdk-linux64.tar.gz
 
       - name: Build ROM
