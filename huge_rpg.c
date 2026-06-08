@@ -1,5 +1,5 @@
 #include <gb/gb.h>
-#include <stdio.h>
+#include <gbdk/console.h>   // For gotoxy()
 #include <stdlib.h>
 #include <string.h>
 #include <rand.h>
@@ -52,7 +52,6 @@ Enemy currentEnemy;
 
 UINT8 battleRunning = 1;
 
-// Shop struct definition
 typedef struct {
     UINT16 potionPrice;
     UINT16 healPrice;
