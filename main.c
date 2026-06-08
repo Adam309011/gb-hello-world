@@ -1,14 +1,11 @@
 #include <gb/gb.h>
 #include <stdio.h>
-#include <gb/font.h>
 
 void main(void) {
-    font_init();
-    font_set(font_load(font_ibm));
-    DISPLAY_ON;
-    printf("HELLO WORLD");
-
+    DISPLAY_ON;                 // Turn screen on
+    printf("HELLO WORLD");      // Print using default font
+    
     while(1) {
-        wait_vbl_done();
+        wait_vbl_done();        // Keep the game running
     }
 }
