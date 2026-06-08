@@ -14,7 +14,10 @@ jobs:
         run: |
           wget https://github.com/gbdk-2020/gbdk-2020/releases/latest/download/gbdk-linux64.tar.gz
           tar -xzf gbdk-linux64.tar.gz
+          # The extracted folder is 'gbdk/' (not 'gbdk/bin')
           echo "$(pwd)/gbdk/bin" >> $GITHUB_PATH
+          # Also set GBDKROOT for lcc
+          echo "GBDKROOT=$(pwd)/gbdk" >> $GITHUB_ENV
       - name: Create Makefile
         run: |
           cat > Makefile << 'EOF'
@@ -27,7 +30,10 @@ jobs:
           	rm -f game.gb *.o *.lst *.map
           EOF
       - name: Compile ROM
-        run: make
+        run: |
+          # Debug: show what's in the bin folder
+          ls -la gbdk/bin/ || true
+          make
       - name: Upload ROM artifact
         uses: actions/upload-artifact@v4
         with:
