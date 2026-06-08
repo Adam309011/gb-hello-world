@@ -21,12 +21,12 @@ void printText(UINT8 x, UINT8 y, char* text) {
 void main() {
     printf(" ");  // load font
     
-    INT16 playerX = 80, playerY = 120;   // signed for calculations
+    INT16 playerX = 80, playerY = 120;
     INT16 enemyX = 80, enemyY = 40;
-    INT8 enemyDX = 2, enemyDY = 1;
+    INT8 enemyDX = 2, enemyDY = 1;   // direction and base speed
     UINT8 gameRunning = 1;
     UINT16 score = 0;
-    UINT8 speedBonus = 0;
+    UINT8 speedLevel = 0;   // 0 = base speed, 1 = faster, etc.
     
     DISPLAY_ON;
     SHOW_SPRITES;
@@ -53,7 +53,6 @@ void main() {
             if (joypad() & J_UP)    playerY--;
             if (joypad() & J_DOWN)  playerY++;
             
-            // Player boundaries (keep inside screen, sprite is 8x8)
             if (playerX < 8) playerX = 8;
             if (playerX > 152) playerX = 152;
             if (playerY < 16) playerY = 16;
@@ -61,17 +60,33 @@ void main() {
             
             score++;
             
-            speedBonus = (score / 300);
-            if (speedBonus > 6) speedBonus = 6;
+            // Increase difficulty every 300 points (increase speed magnitude)
+            // speedLevel = 0 (score<300), 1 (300-599), 2 (600-899), etc.
+            speedLevel = score / 300;
+            if (speedLevel > 6) speedLevel = 6;  // cap at +6 extra speed
             
-            // Enemy movement with current speed
-            enemyX += enemyDX + (speedBonus / 2);
-            enemyY += enemyDY + (speedBonus / 2);
+            // Calculate current speed based on base direction + speedLevel
+            // We keep enemyDX as the sign (+1 or -1) and multiply by speed
+            // But for simplicity, store signed magnitude directly
+            // Actually we need to update enemyDX/enemyDY magnitudes
+            // Let's recompute from base direction signs:
+            INT8 baseDX = (enemyDX > 0) ? 1 : -1;
+            INT8 baseDY = (enemyDY > 0) ? 1 : -1;
+            // Speed values: start at 2 for X, 1 for Y, increase by speedLevel/2? Let's make it clean:
+            // X speed = 2 + speedLevel, Y speed = 1 + speedLevel/2
+            INT8 currentSpeedX = 2 + speedLevel;
+            INT8 currentSpeedY = 1 + (speedLevel / 2);
+            enemyDX = baseDX * currentSpeedX;
+            enemyDY = baseDY * currentSpeedY;
             
-            // Boundary bounce with correction to prevent sticking
+            // Move enemy
+            enemyX += enemyDX;
+            enemyY += enemyDY;
+            
+            // Boundary bounce with position correction
             if (enemyX < 8) {
-                enemyX = 8 + (8 - enemyX);  // push back inside
-                enemyDX = -enemyDX;
+                enemyX = 8 + (8 - enemyX);
+                enemyDX = -enemyDX;   // reverse direction (sign flips, magnitude stays)
             }
             if (enemyX > 152) {
                 enemyX = 152 - (enemyX - 152);
@@ -86,7 +101,7 @@ void main() {
                 enemyDY = -enemyDY;
             }
             
-            // Collision detection (simple AABB)
+            // Collision
             if (playerX < enemyX + 8 && playerX + 8 > enemyX &&
                 playerY < enemyY + 8 && playerY + 8 > enemyY) {
                 gameRunning = 0;
@@ -99,9 +114,9 @@ void main() {
             if (joypad() & J_A) {
                 playerX = 80; playerY = 120;
                 enemyX = 80; enemyY = 40;
-                enemyDX = 2; enemyDY = 1;
+                enemyDX = 2; enemyDY = 1;  // reset to base speed
                 score = 0;
-                speedBonus = 0;
+                speedLevel = 0;
                 gameRunning = 1;
                 printText(0, 1, "        ");
                 printText(0, 2, "       ");
