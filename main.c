@@ -7,7 +7,7 @@ void main() {
     INT8 enemyDX = 2, enemyDY = 1;
     UINT8 gameRunning = 1;
     UINT16 score = 0;
-    UINT8 speedBonus = 0;  // extra speed added over time
+    UINT8 speedBonus = 0;
     
     DISPLAY_ON;
     SHOW_SPRITES;
@@ -19,7 +19,7 @@ void main() {
     
     while(1) {
         if (gameRunning) {
-            // Move player
+            // Movement (same as before)
             if (joypad() & J_LEFT)  playerX--;
             if (joypad() & J_RIGHT) playerX++;
             if (joypad() & J_UP)    playerY--;
@@ -30,14 +30,14 @@ void main() {
             if (playerY < 16) playerY = 16;
             if (playerY > 136) playerY = 136;
             
-            // Increase score (survival time)
+            // Score increases
             score++;
             
-            // Difficulty: every 300 points, enemy gets faster (max +6)
+            // Difficulty scaling
             speedBonus = (score / 300) * 1;
             if (speedBonus > 6) speedBonus = 6;
             
-            // Move enemy with current speed
+            // Enemy movement
             enemyX += enemyDX + speedBonus/2;
             enemyY += enemyDY + speedBonus/2;
             if (enemyX < 8 || enemyX > 152) enemyDX = -enemyDX;
@@ -49,7 +49,6 @@ void main() {
                 gameRunning = 0;
             }
         } else {
-            // Game over: press A to reset everything
             if (joypad() & J_A) {
                 playerX = 80;
                 playerY = 120;
@@ -63,10 +62,22 @@ void main() {
             }
         }
         
-        // Show score (using background text)
-        printf("\n SCORE: %05u    ", score);
+        // ===== FIXED DISPLAY =====
+        // Position cursor at top-left (row 0, column 0) and print score
+        gotoxy(0, 0);
+        printf("SCORE: %05u     ", score);  // Spaces after to clear old digits
+        
         if (!gameRunning) {
-            printf("\n GAME OVER     \n PRESS A       ");
+            gotoxy(0, 1);
+            printf("GAME OVER      ");
+            gotoxy(0, 2);
+            printf("PRESS A        ");
+        } else {
+            // Clear the GAME OVER lines when restarting
+            gotoxy(0, 1);
+            printf("               ");
+            gotoxy(0, 2);
+            printf("               ");
         }
         
         // Draw sprites
