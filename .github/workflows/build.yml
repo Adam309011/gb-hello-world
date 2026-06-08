@@ -16,9 +16,11 @@ jobs:
           tar -xzf gbdk-linux64.tar.gz
           echo "GBDKROOT=$(pwd)/gbdk" >> $GITHUB_ENV
           echo "$(pwd)/gbdk/bin" >> $GITHUB_PATH
-          # Fix missing sdcc path
+          # Create /opt/gbdk/bin and symlink ALL binaries from gbdk/bin
           sudo mkdir -p /opt/gbdk/bin
-          sudo ln -sf $(pwd)/gbdk/bin/sdcc /opt/gbdk/bin/sdcc
+          for file in $(pwd)/gbdk/bin/*; do
+            sudo ln -sf $file /opt/gbdk/bin/
+          done
       - name: Create Makefile
         run: |
           cat > Makefile << 'EOF'
@@ -32,10 +34,7 @@ jobs:
           	rm -f game.gb *.o *.lst *.map
           EOF
       - name: Compile ROM
-        run: |
-          # Show that headers exist (debug)
-          ls -la $GBDKROOT/include/gb/ || true
-          make
+        run: make
       - name: Upload ROM artifact
         uses: actions/upload-artifact@v4
         with:
