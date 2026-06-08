@@ -10,34 +10,36 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - name: Install GBDK
         run: |
           wget https://github.com/gbdk-2020/gbdk-2020/releases/latest/download/gbdk-linux64.tar.gz
           tar -xzf gbdk-linux64.tar.gz
           echo "GBDKROOT=$(pwd)/gbdk" >> $GITHUB_ENV
           echo "$(pwd)/gbdk/bin" >> $GITHUB_PATH
-          # Symlink all binaries to /opt/gbdk/bin
-          sudo mkdir -p /opt/gbdk/bin
+          # Create missing /opt/gbdk structure with symlinks
+          sudo mkdir -p /opt/gbdk/bin /opt/gbdk/lib
           for file in $(pwd)/gbdk/bin/*; do
             sudo ln -sf $file /opt/gbdk/bin/
           done
-          # Symlink the entire lib directory to /opt/gbdk/lib
           sudo ln -sf $(pwd)/gbdk/lib /opt/gbdk/lib
+
       - name: Create Makefile
         run: |
           cat > Makefile << 'EOF'
           CC = lcc
           CFLAGS = -Wa-l -Wl-m -Wl-j -I$(GBDKROOT)/include -L$(GBDKROOT)/lib
-          LDFLAGS = -L$(GBDKROOT)/lib
           all: game.gb
           game.gb: huge_rpg.c
           	$(CC) $(CFLAGS) -o $@ $<
           clean:
           	rm -f game.gb *.o *.lst *.map
           EOF
+
       - name: Compile ROM
         run: make
-      - name: Upload ROM artifact
+
+      - name: Upload ROM
         uses: actions/upload-artifact@v4
         with:
           name: gameboy-rom
