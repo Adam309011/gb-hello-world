@@ -11,7 +11,6 @@ void printScore(UINT8 x, UINT8 y, UINT16 score) {
     }
 }
 
-// Print a small number (1-9) at background position
 void printNumber(UINT8 x, UINT8 y, UINT8 num) {
     char buffer[2];
     sprintf(buffer, "%u", num);
@@ -33,8 +32,8 @@ void main() {
     INT8 enemyDX = 2, enemyDY = 1;
     UINT8 gameRunning = 1;
     UINT16 score = 0;
-    UINT8 speedLevel = 0;       // 0 = base speed, 1 = faster, etc.
-    UINT8 level = 1;            // displayed level = speedLevel + 1
+    UINT8 speedLevel = 0;
+    UINT8 level = 1;
     
     DISPLAY_ON;
     SHOW_SPRITES;
@@ -47,9 +46,9 @@ void main() {
         }
     }
     
-    // Static labels
-    printText(0, 0, "SCORE:");
-    printText(15, 0, "LEVEL:");   // placed at column 15
+    // Static labels (all within visible 0-19)
+    printText(0, 0, "SCORE:");   // columns 0-5
+    printText(13, 0, "LV:");     // columns 13-15
     
     UINT8 playerTile[] = { 0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF };
     UINT8 enemyTile[]  = { 0xAA,0x55,0xAA,0x55,0xAA,0x55,0xAA,0x55 };
@@ -71,12 +70,11 @@ void main() {
             
             score++;
             
-            // Difficulty: every 300 points increase speedLevel (max 6)
             speedLevel = score / 300;
             if (speedLevel > 6) speedLevel = 6;
-            level = speedLevel + 1;   // level displayed starts at 1
+            level = speedLevel + 1;
             
-            // Calculate current speed from base signs
+            // Speed calculation
             INT8 baseDX = (enemyDX > 0) ? 1 : -1;
             INT8 baseDY = (enemyDY > 0) ? 1 : -1;
             INT8 currentSpeedX = 2 + speedLevel;
@@ -84,11 +82,11 @@ void main() {
             enemyDX = baseDX * currentSpeedX;
             enemyDY = baseDY * currentSpeedY;
             
-            // Move enemy
+            // Enemy movement
             enemyX += enemyDX;
             enemyY += enemyDY;
             
-            // Boundary bounce with correction
+            // Boundary bounce
             if (enemyX < 8) {
                 enemyX = 8 + (8 - enemyX);
                 enemyDX = -enemyDX;
@@ -113,13 +111,12 @@ void main() {
             }
             
             // Update displays
-            printScore(7, 0, score);
-            printNumber(21, 0, level);   // after "LEVEL:" (column 21)
+            printScore(7, 0, score);   // starts after "SCORE:"
+            printNumber(16, 0, level); // after "LV:" (col 16)
         } else {
             printText(0, 1, "GAME OVER");
             printText(0, 2, "PRESS A");
             if (joypad() & J_A) {
-                // Reset everything
                 playerX = 80; playerY = 120;
                 enemyX = 80; enemyY = 40;
                 enemyDX = 2; enemyDY = 1;
@@ -127,11 +124,10 @@ void main() {
                 speedLevel = 0;
                 level = 1;
                 gameRunning = 1;
-                // Clear messages and re-display static labels
                 printText(0, 1, "        ");
                 printText(0, 2, "       ");
                 printText(0, 0, "SCORE:");
-                printText(15, 0, "LEVEL:");
+                printText(13, 0, "LV:");
             }
         }
         
