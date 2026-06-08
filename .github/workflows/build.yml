@@ -1,0 +1,31 @@
+name: Build Game Boy ROM
+
+on: [push]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Install GBDK
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y wget make
+        wget https://github.com/gbdk-2020/gbdk-2020/releases/latest/download/gbdk-linux64.tar.gz
+        tar -xzf gbdk-linux64.tar.gz
+
+    - name: Build ROM
+      run: |
+        export GBDK_HOME=$PWD/gbdk
+        export PATH=$GBDK_HOME/bin:$PATH
+        sdcc -c -o main.o main.c
+        sdcc -o game.gb main.o
+
+    - name: Upload ROM
+      uses: actions/upload-artifact@v4
+      with:
+        name: gameboy-rom
+        path: game.gb
