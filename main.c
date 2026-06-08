@@ -3,10 +3,9 @@
 #include <gb/font.h>
 
 void main(void) {
-
     font_init();
     font_set(font_load(font_ibm));
-
+    DISPLAY_ON;
     printf("HELLO WORLD");
 
     while(1) {
