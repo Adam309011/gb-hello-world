@@ -1,10 +1,12 @@
 #include <gb/gb.h>
-#include <gb/console.h>
 #include <stdio.h>
+#include <gb/font.h>
 
 void main(void) {
 
-    gotoxy(2, 2);
+    font_init();
+    font_set(font_load(font_ibm));
+
     printf("HELLO WORLD");
 
     while(1) {
